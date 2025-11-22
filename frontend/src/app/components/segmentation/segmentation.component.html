@@ -1,0 +1,95 @@
+<div class="segmentation-container">
+  <header class="header">
+    <h1>Liver Tumor Segmentation</h1>
+    <p class="subtitle">Upload a liver scan image for tumor segmentation analysis</p>
+  </header>
+
+  <div class="content">
+    <!-- Upload Section -->
+    <div class="card upload-section">
+      <h2>Upload & Configure</h2>
+      
+      <div class="form-group">
+        <label for="model-select">Select Model:</label>
+        <select 
+          id="model-select" 
+          [(ngModel)]="selectedModel" 
+          class="form-control"
+          [disabled]="isUploading || isSegmenting">
+          <option *ngFor="let model of availableModels" [value]="model">
+            {{ model.toUpperCase() }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="file-input">Select Image:</label>
+        <input 
+          type="file" 
+          id="file-input"
+          (change)="onFileSelected($event)"
+          accept="image/*"
+          class="file-input"
+          [disabled]="isUploading || isSegmenting">
+        <div *ngIf="selectedFile" class="file-info">
+          Selected: {{ selectedFile.name }}
+        </div>
+      </div>
+
+      <button 
+        class="btn btn-primary"
+        (click)="uploadImage()"
+        [disabled]="!selectedFile || isUploading || isSegmenting">
+        <span *ngIf="isUploading">Uploading...</span>
+        <span *ngIf="!isUploading && !isSegmenting">Upload & Segment</span>
+        <span *ngIf="isSegmenting">Processing...</span>
+      </button>
+
+      <button 
+        class="btn btn-secondary"
+        (click)="reset()"
+        [disabled]="isUploading || isSegmenting">
+        Reset
+      </button>
+
+      <div *ngIf="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="results-section" *ngIf="segmentationResult">
+      <div class="card">
+        <h2>Results</h2>
+        <div class="status-message" [class.success]="segmentationResult.success">
+          {{ segmentationResult.message }}
+        </div>
+        <div class="model-info">
+          Model Used: <strong>{{ segmentationResult.modelUsed.toUpperCase() }}</strong>
+        </div>
+      </div>
+
+      <div class="images-container">
+        <div class="image-card">
+          <h3>Original Image</h3>
+          <div class="image-wrapper">
+            <img [src]="getOriginalImageUrl()" alt="Original Image" class="result-image">
+          </div>
+        </div>
+
+        <div class="image-card">
+          <h3>Segmented Result</h3>
+          <div class="image-wrapper">
+            <img [src]="getSegmentedImageUrl()" alt="Segmented Image" class="result-image">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div class="loading-section" *ngIf="isSegmenting">
+      <div class="loader"></div>
+      <p>Processing segmentation with {{ selectedModel.toUpperCase() }} model...</p>
+    </div>
+  </div>
+</div>
