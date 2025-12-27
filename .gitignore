@@ -6,6 +6,7 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 ENV/
 build/
 develop-eggs/
@@ -31,8 +32,27 @@ backend/target/
 backend/.mvn/
 backend/mvnw
 backend/mvnw.cmd
-backend/uploads/
-backend/outputs/
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/outputs/*
+!backend/outputs/.gitkeep
+
+# ML Service
+ml-service/__pycache__/
+ml-service/venv/
+ml-service/.venv/
+ml-service/uploads/
+ml-service/outputs/
+ml-service/ml_inference_old.py
+ml-service/requirements_old.txt
+
+# Models (large files - consider using Git LFS)
+ml-service/models/*.h5
+ml-service/models/*.pkl
+ml-service/models/*.pt
+ml-service/models/*.pth
+ml-service/models/*.onnx
+!ml-service/models/README.md
 
 # Frontend (Angular)
 frontend/node_modules/
@@ -57,7 +77,16 @@ Thumbs.db
 *.swo
 *~
 
-# Uploads and outputs
+# Docker
+.env
+.env.local
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/
+
+# Uploads and outputs (root level)
 uploads/
 outputs/
 

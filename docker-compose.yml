@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # Python ML Microservice
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    container_name: liver-tumor-ml-service
+    ports:
+      - "5000:5000"
+    volumes:
+      # Share uploads and outputs with backend
+      - ./backend/uploads:/app/../backend/uploads
+      - ./backend/outputs:/app/../backend/outputs
+      # Mount trained models
+      - ./ml-service/models:/app/models
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+    networks:
+      - liver-tumor-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Java Spring Boot Backend
+  backend-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: liver-tumor-backend
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount uploads and outputs directories
+      - ./backend/uploads:/app/uploads
+      - ./backend/outputs:/app/outputs
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - ML_SERVICE_URL=http://ml-service:5000
+    depends_on:
+      ml-service:
+        condition: service_healthy
+    networks:
+      - liver-tumor-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  liver-tumor-network:
+    driver: bridge
+    name: liver-tumor-network
+
+# Optional: Use named volumes instead of bind mounts for production
+# volumes:
+#   ml-uploads:
+#   ml-outputs:
+#   backend-uploads:
+#   backend-outputs:
+
