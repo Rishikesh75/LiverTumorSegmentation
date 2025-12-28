@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for Python ML Service
-FROM python:3.10-slim as base
+FROM python:3.10-slim AS base
 
 # Set working directory
 WORKDIR /app
@@ -11,8 +11,7 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libxrender-dev \
     libgomp1 \
-    libglib2.0-0 \
-    libgl1-mesa-glx \
+    libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies
@@ -22,7 +21,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy application code
 COPY app.py .
-COPY utils/ ./utils/ 2>/dev/null || true
+
+# Copy utils directory (even if empty)
+COPY utils/ ./utils/
 
 # Create necessary directories
 RUN mkdir -p /app/uploads /app/outputs /app/models
