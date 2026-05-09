@@ -1,132 +1,73 @@
-# Liver Tumor Segmentation - Frontend
+# React + TypeScript + Vite
 
-Angular application for liver tumor segmentation using various deep learning models.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Prerequisites
+Currently, two official plugins are available:
 
-- Node.js 18+ and npm
-- Angular CLI 17
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-## Installation
+## React Compiler
 
-1. Navigate to the frontend directory:
-```bash
-cd frontend
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
+
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
 
-2. Install dependencies:
-```bash
-npm install
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
-
-## Development Server
-
-Run the development server:
-
-```bash
-npm start
-```
-
-or
-
-```bash
-ng serve
-```
-
-Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
-
-## Build
-
-Build the project for production:
-
-```bash
-ng build
-```
-
-The build artifacts will be stored in the `dist/` directory.
-
-## Features
-
-- Upload liver scan images
-- Select from multiple segmentation models:
-  - UNet
-  - UNet++
-  - Attention UNet
-  - Trans-UNet
-  - Ensemble
-- View original and segmented images side-by-side
-- Responsive design with modern UI
-
-## Architecture
-
-This project follows a **Layered Architecture** pattern with clear separation of concerns. For detailed architecture documentation, see [ARCHITECTURE.md](./ARCHITECTURE.md).
-
-### Layers:
-
-1. **Presentation Layer** (`src/app/presentation/`) - UI components and views
-2. **Application Layer** (`src/app/application/`) - Business logic, use cases, and facades
-3. **Domain Layer** (`src/app/domain/`) - Core business entities and rules
-4. **Infrastructure Layer** (`src/app/infrastructure/`) - External services and API clients
-5. **Core/Shared Layer** (`src/app/core/`) - Common utilities and configuration
-
-### Benefits:
-- ✅ Clear separation of concerns
-- ✅ Highly testable and maintainable
-- ✅ Technology-independent business logic
-- ✅ Easy to scale and extend
-- ✅ Framework-agnostic core
-
-## Project Structure
-
-```
-frontend/
-├── src/
-│   ├── app/
-│   │   ├── presentation/          # Presentation Layer
-│   │   │   ├── components/
-│   │   │   │   └── segmentation/  # Main segmentation component
-│   │   │   └── view-models/       # Component state management
-│   │   ├── application/           # Application Layer
-│   │   │   ├── facades/           # Simplified interfaces
-│   │   │   ├── use-cases/         # Business operations
-│   │   │   └── dtos/              # Data transfer objects
-│   │   ├── domain/                # Domain Layer
-│   │   │   ├── entities/          # Core business objects
-│   │   │   ├── value-objects/     # Immutable value objects
-│   │   │   ├── interfaces/        # Domain contracts
-│   │   │   └── enums/             # Domain enumerations
-│   │   ├── infrastructure/        # Infrastructure Layer
-│   │   │   ├── services/          # HTTP services
-│   │   │   ├── repositories/      # Data access implementations
-│   │   │   └── adapters/          # API response adapters
-│   │   ├── core/                  # Core/Shared Layer
-│   │   │   ├── config/            # Configuration
-│   │   │   ├── constants/         # Application constants
-│   │   │   ├── types/             # Common types
-│   │   │   ├── utils/             # Utilities
-│   │   │   └── providers/         # Dependency injection
-│   │   ├── app.component.*        # Root component
-│   │   ├── app.config.ts          # App configuration
-│   │   └── app.routes.ts          # Routing configuration
-│   ├── assets/                    # Static assets
-│   ├── index.html                 # Main HTML file
-│   └── styles.css                 # Global styles
-├── ARCHITECTURE.md                # Detailed architecture documentation
-├── angular.json                   # Angular CLI configuration
-├── package.json                   # Dependencies
-└── tsconfig.json                  # TypeScript configuration
-```
-
-## API Integration
-
-The frontend communicates with the Spring Boot backend running on `http://localhost:8080`.
-
-API endpoints used:
-- `GET /api/models` - Get available models
-- `POST /api/upload` - Upload image
-- `POST /api/segment` - Perform segmentation
-- `GET /api/images/{fileName}` - Retrieve images
-
-## License
-
-MIT
