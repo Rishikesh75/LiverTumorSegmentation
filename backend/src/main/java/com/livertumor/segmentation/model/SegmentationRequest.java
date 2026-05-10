@@ -5,6 +5,11 @@ public class SegmentationRequest {
     private String modelType;
     private String imagePath;
 
+    /**
+     * Optional override for the notification recipient. When omitted, the authenticated user's email is used.
+     */
+    private String notificationEmail;
+
     public SegmentationRequest() {
     }
 
@@ -27,6 +32,14 @@ public class SegmentationRequest {
 
     public void setImagePath(String imagePath) {
         this.imagePath = imagePath;
+    }
+
+    public String getNotificationEmail() {
+        return notificationEmail;
+    }
+
+    public void setNotificationEmail(String notificationEmail) {
+        this.notificationEmail = notificationEmail;
     }
 }
 

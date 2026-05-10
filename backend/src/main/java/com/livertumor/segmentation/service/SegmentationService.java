@@ -21,26 +21,37 @@ public class SegmentationService {
     @Autowired
     private MLServiceClient mlServiceClient;
 
+    @Autowired
+    private SegmentationEmailService segmentationEmailService;
+
     /**
      * Perform segmentation by delegating to ML microservice.
      *
-     * @param request SegmentationRequest containing image path and model type
-     * @return SegmentationResponse with results
+     * @param sendCompletionEmail when true, schedules notification like the legacy synchronous endpoint
      */
-    public SegmentationResponse performSegmentation(SegmentationRequest request) {
-        logger.info("Processing segmentation request for image: {}, model: {}", 
-                   request.getImagePath(), request.getModelType());
-        
-        // Delegate to ML microservice
+    public SegmentationResponse performSegmentation(SegmentationRequest request, boolean sendCompletionEmail) {
+        logger.info("Processing segmentation request for image: {}, model: {}",
+                request.getImagePath(), request.getModelType());
+
         SegmentationResponse response = mlServiceClient.performSegmentation(request);
-        
+
         if (response.isSuccess()) {
             logger.info("Segmentation completed successfully");
+            if (sendCompletionEmail) {
+                segmentationEmailService.scheduleCompletionNotification(request, response);
+            }
         } else {
             logger.error("Segmentation failed: {}", response.getMessage());
         }
-        
+
         return response;
+    }
+
+    /**
+     * @deprecated prefer {@link #performSegmentation(SegmentationRequest, boolean)}
+     */
+    public SegmentationResponse performSegmentation(SegmentationRequest request) {
+        return performSegmentation(request, true);
     }
 
     /**
