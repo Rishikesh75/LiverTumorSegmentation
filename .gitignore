@@ -90,3 +90,13 @@ logs/
 uploads/
 outputs/
 
+# Local secrets and scratch files (never commit)
+**/cookies.txt
+login.json
+res.txt
+
+# Spring local overrides and Vite local env (copy from application-template.properties / fill .env.local)
+**/application-local.properties
+frontend/.env.local
+frontend/.env.*.local
+
