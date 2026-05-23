@@ -1,6 +1,6 @@
 import type { VolumeRepository } from '@application/ports/repositories'
 import type { VolumeMetadata } from '@domain/entities/segmentation'
-import { detectVolumeFormat } from '@domain/lib/volumeFormat'
+import { detectVolumeFormat } from '@domain/utils/volumeFormat'
 
 export async function uploadVolume(
   volumes: VolumeRepository,

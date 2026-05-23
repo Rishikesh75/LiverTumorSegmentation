@@ -1,4 +1,4 @@
-import { userDisplayInitials } from '@domain/lib/userDisplayInitials'
+import { userDisplayInitials } from '@domain/utils/userDisplayInitials'
 import { ProfileEditForm } from '@presentation/components/ProfileEditForm'
 import { useAuth } from '@presentation/context/AuthContext'
 import { useEffect, useRef, useState } from 'react'

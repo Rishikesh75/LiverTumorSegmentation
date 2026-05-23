@@ -4,7 +4,7 @@ import {
   SEGMENTATION_MODELS,
   type SegmentationModelType,
 } from '@domain/entities/segmentation'
-import { detectVolumeFormat } from '@domain/lib/volumeFormat'
+import { detectVolumeFormat } from '@domain/utils/volumeFormat'
 import { VolumeDropzone } from '@presentation/components/VolumeDropzone'
 import { useAuth } from '@presentation/context/AuthContext'
 import { useAppServices } from '@presentation/context/AppServicesContext'

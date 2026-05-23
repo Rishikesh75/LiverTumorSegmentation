@@ -1,5 +1,5 @@
-import { isAcceptedVolumeFile } from '@domain/lib/volumeFormat'
-import { useCallback, useId, useState, type ChangeEvent } from 'react'
+import { isAcceptedVolumeFile } from '@domain/utils/volumeFormat'
+import { useCallback, useId, useState, type ChangeEvent, type DragEvent } from 'react'
 
 type Props = {
   onFilesSelected: (files: File[]) => void
@@ -31,7 +31,7 @@ export function VolumeDropzone({ onFilesSelected, disabled }: Props) {
     e.target.value = ''
   }
 
-  const onDrop = (e: React.DragEvent) => {
+  const onDrop = (e: DragEvent) => {
     e.preventDefault()
     setDragOver(false)
     if (disabled) return
