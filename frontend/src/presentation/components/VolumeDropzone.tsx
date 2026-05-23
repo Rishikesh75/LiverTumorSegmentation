@@ -1,5 +1,13 @@
+'use client'
+
 import { isAcceptedVolumeFile } from '@domain/utils/volumeFormat'
-import { useCallback, useId, useState, type ChangeEvent, type DragEvent } from 'react'
+import {
+  useCallback,
+  useId,
+  useState,
+  type ChangeEvent,
+  type DragEvent,
+} from 'react'
 
 type Props = {
   onFilesSelected: (files: File[]) => void
@@ -53,10 +61,14 @@ export function VolumeDropzone({ onFilesSelected, disabled }: Props) {
   }
 
   return (
-    <div className="dropzone-wrap">
+    <div>
       <label
         htmlFor={inputId}
-        className={`dropzone ${dragOver ? 'dropzone--active' : ''} ${disabled ? 'dropzone--disabled' : ''}`}
+        className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-10 transition-colors ${
+          dragOver
+            ? 'border-violet-400 bg-violet-900/20'
+            : 'border-border bg-surface hover:border-violet-500/50'
+        } ${disabled ? 'pointer-events-none opacity-50' : ''}`}
         onDragOver={(e) => {
           e.preventDefault()
           if (!disabled) setDragOver(true)
@@ -67,21 +79,21 @@ export function VolumeDropzone({ onFilesSelected, disabled }: Props) {
         <input
           id={inputId}
           type="file"
-          className="dropzone-input"
+          className="sr-only"
           accept={accept}
           multiple
           disabled={disabled}
           onChange={onInputChange}
         />
-        <div className="dropzone-body">
-          <strong>Drop volume here</strong>
-          <p className="dropzone-hint">
-            NIfTI (.nii, .nii.gz) · DICOM (.dcm) · ZIP of DICOM
-          </p>
-          <span className="btn btn-secondary">Browse files</span>
-        </div>
+        <strong className="text-white">Drop volume here</strong>
+        <p className="mt-2 text-center text-sm text-muted">
+          NIfTI (.nii, .nii.gz) · DICOM (.dcm) · ZIP of DICOM
+        </p>
+        <span className="mt-4 rounded-lg border border-border bg-slate-800 px-4 py-2 text-sm text-slate-200">
+          Browse files
+        </span>
       </label>
-      {error ? <p className="form-error">{error}</p> : null}
+      {error ? <p className="mt-2 text-sm text-danger">{error}</p> : null}
     </div>
   )
 }

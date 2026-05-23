@@ -1,3 +1,5 @@
+'use client'
+
 import type { SegmentationJob } from '@domain/entities/segmentation'
 import { useEffect, useRef } from 'react'
 
@@ -34,31 +36,41 @@ export function JobCompleteModal({
   return (
     <dialog
       ref={dialogRef}
-      className="app-dialog"
+      className="w-full max-w-md rounded-xl border border-border bg-surface p-0 text-foreground shadow-xl backdrop:bg-slate-950/75"
       aria-labelledby="job-complete-title"
       onClose={onClose}
     >
-      <div className="app-dialog-panel">
-        <h2 id="job-complete-title">Segmentation complete</h2>
-        <p>
-          Your job for <strong>{job.volumeName}</strong> finished successfully
-          using model <code>{job.modelType}</code>.
+      <div className="p-6">
+        <h2 id="job-complete-title" className="mb-3 text-lg font-semibold text-white">
+          Segmentation complete
+        </h2>
+        <p className="mb-2 text-sm text-slate-300">
+          Your job for <strong className="text-white">{job.volumeName}</strong>{' '}
+          finished successfully using model{' '}
+          <code className="rounded bg-violet-900/30 px-1 text-violet-200">
+            {job.modelType}
+          </code>
+          .
         </p>
-        <p>
+        <p className="mb-2 text-sm text-slate-300">
           A summary of your results was sent to{' '}
-          <strong>{userEmail}</strong>
+          <strong className="text-white">{userEmail}</strong>
           {notifyPending ? ' (sending…)' : '.'}
         </p>
-        <p className="muted">
+        <p className="mb-4 text-xs text-muted">
           In production this is sent by the server. The mock logs the message
           and stores it in localStorage for demo purposes.
         </p>
-        {notifyError ? <p className="form-error">{notifyError}</p> : null}
-        <div className="app-dialog-actions">
-          <button type="button" className="btn btn-primary" onClick={onClose}>
-            View results
-          </button>
-        </div>
+        {notifyError ? (
+          <p className="mb-3 text-sm text-danger">{notifyError}</p>
+        ) : null}
+        <button
+          type="button"
+          className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500"
+          onClick={onClose}
+        >
+          View results
+        </button>
       </div>
     </dialog>
   )

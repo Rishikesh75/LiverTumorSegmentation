@@ -4,7 +4,7 @@ A complete full-stack application for liver tumor segmentation using deep learni
 
 ## 🏗️ Architecture
 
-- **Frontend**: Angular 17 (TypeScript)
+- **Frontend**: Next.js 16 (`liversegpro-frontend/`) — legacy Vite app in `frontend/`
 - **Backend**: Spring Boot 3.2 (Java)
 - **ML Models**: Python (TensorFlow/PyTorch)
 
@@ -39,12 +39,14 @@ The backend will start on `http://localhost:8080`
 Open a new terminal:
 
 ```bash
-cd frontend
+cd liversegpro-frontend
 npm install
-npm start
+npm run dev
 ```
 
-The frontend will start on `http://localhost:4200`
+The frontend will start on `http://localhost:3000`
+
+Set `APP_FRONTEND_URL=http://localhost:3000` on the Spring Boot backend for OAuth redirects.
 
 ### 4. Access the Application
 

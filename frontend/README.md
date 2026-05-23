@@ -1,73 +1,58 @@
-# React + TypeScript + Vite
+# LiverSeg Pro (Next.js frontend)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Liver tumor **3D volume upload and segmentation** UI. Talks to the Spring Boot backend via same-origin API rewrites in development.
 
-Currently, two official plugins are available:
+## Prerequisites
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Node.js 20+
+- Spring Boot backend on port **8080** (for real API mode)
+- Optional: ML service if jobs call inference endpoints
 
-## React Compiler
+## Setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+cp .env.example .env.local
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Edit `.env.local` as needed. For the real backend:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```env
+NEXT_PUBLIC_USE_MOCK_API=false
+NEXT_PUBLIC_API_BASE_URL=
+BACKEND_URL=http://localhost:8080
 ```
+
+On the **Spring Boot** backend, set:
+
+```properties
+APP_FRONTEND_URL=http://localhost:3000
+```
+
+so Google OAuth redirects to this app after sign-in.
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Dev server at [http://localhost:3000](http://localhost:3000) |
+| `npm run build` | Production build |
+| `npm run start` | Run production server |
+| `npm run lint` | ESLint |
+
+## Mock API mode
+
+Set `NEXT_PUBLIC_USE_MOCK_API=true` (or omit it — mocks are on by default when not explicitly `false`) to run without the backend. Data is stored in `localStorage`.
+
+## Architecture
+
+- **App Router** (`app/`) — routes, layouts, providers
+- **Clean architecture** (`src/domain`, `src/application`, `src/infrastructure`, `src/presentation`)
+- **TanStack Query** — server state
+- **Niivue** — in-browser NIfTI preview (client-only, dynamic import)
+
+See [BACKEND-API.md](./BACKEND-API.md) for REST contract details.
+
+## Migrated from
+
+This app replaces the legacy Vite SPA in [`../frontend/`](../frontend/). Use this directory for new frontend work.

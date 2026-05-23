@@ -1,6 +1,6 @@
-# Backend API contract (Spring Boot follow-up)
+# Backend API contract (Spring Boot)
 
-The React app is built **frontend-first** with a **mock** repository layer when `VITE_USE_MOCK_API` is not `false`. Replace mocks by implementing HTTP adapters under `src/infrastructure/http/` and wiring them in `src/app/composition.ts`.
+The Next.js app is built **frontend-first** with a **mock** repository layer when `NEXT_PUBLIC_USE_MOCK_API` is not `false`. HTTP adapters live under `src/infrastructure/http/` and are wired in `src/lib/composition.ts`.
 
 ## Suggested REST surface
 
@@ -17,24 +17,24 @@ The React app is built **frontend-first** with a **mock** repository layer when 
 | Job detail | GET | `/api/jobs/:id` | Include status + result references |
 | Job results | GET | `/api/jobs/:id/results` | Slice URLs or mask volume URL |
 | Analytics | GET | `/api/users/me/analytics` | Counts + recent jobs for current user |
-| User profile | PATCH | `/api/users/me` | Body: `{ displayName?, organization? }` (email read-only or separate verified flow) |
-| Job email notify | POST | `/api/jobs/:id/notify` | Optional: enqueue transactional email with result links; may instead be triggered automatically when job status → completed |
-
-Legacy 2D endpoints (`POST /api/upload`, `POST /api/segment`, `GET /api/images/...`) can remain for single-slice flows; **do not** force NIfTI/DICOM through them until the backend accepts volumetric uploads and returns job IDs.
+| User profile | PATCH | `/api/users/me` | Body: `{ displayName?, organization? }` |
+| Job email notify | POST | `/api/jobs/:id/notify` | Optional transactional email |
 
 ## Local development
 
-- Vite dev server: `http://localhost:5173`
-- Optional proxy: `vite.config.ts` proxies `/api` → `http://localhost:8080` so you can call relative `/api/...` without CORS during dev.
-- Spring **CORS** must allow origin `http://localhost:5173` (the repo previously allowed only `http://localhost:4200`).
+- Next.js dev server: `http://localhost:3000`
+- API rewrites in `next.config.ts` proxy `/api`, `/oauth2`, and `/login/oauth2` to Spring Boot (`BACKEND_URL`, default `http://localhost:8080`).
+- Set **`APP_FRONTEND_URL=http://localhost:3000`** on the Spring Boot backend so Google OAuth redirects back to this app after sign-in.
 
 ## Environment variables
 
-| Variable | Purpose |
-|----------|---------|
-| `VITE_USE_MOCK_API` | If not `false`, use in-browser mock repositories (`localStorage`). |
-| `VITE_API_BASE_URL` | Base URL for HTTP adapters (e.g. `http://localhost:8080`). |
+| Variable | Scope | Purpose |
+|----------|-------|---------|
+| `NEXT_PUBLIC_USE_MOCK_API` | Client | If not `false`, use in-browser mock repositories (`localStorage`). |
+| `NEXT_PUBLIC_API_BASE_URL` | Client | API base URL; leave empty for same-origin `/api` via rewrites. |
+| `NEXT_PUBLIC_OAUTH_GOOGLE_PATH` | Client | Google OAuth start path (default `/oauth2/authorization/google`). |
+| `BACKEND_URL` | Server | Spring Boot URL for Next.js rewrites (default `http://localhost:8080`). |
 
 ## Mock notification log (development)
 
-When using mocks, completed jobs call `MockNotificationRepository`, which appends entries to `localStorage` key `liver-tumor-segmentation-mock-notifications-v1` (capped list) for demo verification.
+When using mocks, completed jobs append entries to `localStorage` key `liver-tumor-segmentation-mock-notifications-v1` for demo verification.

@@ -1,10 +1,14 @@
+'use client'
+
 import { userDisplayInitials } from '@domain/utils/userDisplayInitials'
 import { ProfileEditForm } from '@presentation/components/ProfileEditForm'
 import { useAuth } from '@presentation/context/AuthContext'
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 export function UserProfileMenu() {
   const { session, logout } = useAuth()
+  const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -33,28 +37,40 @@ export function UserProfileMenu() {
   const initials = userDisplayInitials(session.user)
   const label = session.user.displayName?.trim() || session.user.email
 
+  const handleLogout = async () => {
+    setMenuOpen(false)
+    await logout()
+    router.replace('/login')
+  }
+
   return (
-    <div className="user-profile-menu" ref={wrapRef}>
+    <div className="relative" ref={wrapRef}>
       <button
         type="button"
-        className="user-profile-trigger"
+        className="flex items-center gap-1 rounded-full border border-border bg-slate-800 px-2 py-1 text-sm hover:bg-slate-700"
         aria-expanded={menuOpen}
         aria-haspopup="true"
         onClick={() => setMenuOpen((o) => !o)}
         title={label}
       >
-        <span className="user-profile-avatar" aria-hidden>
+        <span
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-600 text-xs font-semibold text-white"
+          aria-hidden
+        >
           {initials}
         </span>
-        <span className="user-profile-chevron" aria-hidden>
+        <span className="text-muted" aria-hidden>
           ▾
         </span>
       </button>
       {menuOpen ? (
-        <div className="user-profile-dropdown" role="menu">
+        <div
+          className="absolute right-0 z-50 mt-1 min-w-[10rem] rounded-lg border border-border bg-surface py-1 shadow-lg"
+          role="menu"
+        >
           <button
             type="button"
-            className="user-profile-dropdown-item"
+            className="block w-full px-4 py-2 text-left text-sm text-slate-200 hover:bg-slate-800"
             role="menuitem"
             onClick={() => {
               setMenuOpen(false)
@@ -65,12 +81,9 @@ export function UserProfileMenu() {
           </button>
           <button
             type="button"
-            className="user-profile-dropdown-item"
+            className="block w-full px-4 py-2 text-left text-sm text-slate-200 hover:bg-slate-800"
             role="menuitem"
-            onClick={() => {
-              setMenuOpen(false)
-              void logout()
-            }}
+            onClick={() => void handleLogout()}
           >
             Sign out
           </button>
@@ -79,12 +92,12 @@ export function UserProfileMenu() {
 
       {profileOpen ? (
         <div
-          className="app-modal-backdrop"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4"
           role="presentation"
           onClick={() => setProfileOpen(false)}
         >
           <div
-            className="app-dialog-panel app-dialog-panel--narrow"
+            className="w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-xl"
             role="dialog"
             aria-labelledby="profile-dialog-title"
             onClick={(e) => e.stopPropagation()}

@@ -1,3 +1,5 @@
+'use client'
+
 import { Niivue } from '@niivue/niivue'
 import { useEffect, useRef, useState } from 'react'
 
@@ -15,7 +17,7 @@ export function NiftiPreview({ file }: Props) {
 
     host.replaceChildren()
     const canvas = document.createElement('canvas')
-    canvas.className = 'nifti-canvas'
+    canvas.className = 'max-w-full rounded-lg bg-black'
     canvas.width = 640
     canvas.height = 480
     host.appendChild(canvas)
@@ -33,7 +35,9 @@ export function NiftiPreview({ file }: Props) {
         await nv.loadVolumes([{ url: objectUrl }])
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : 'Failed to load NIfTI preview')
+          setError(
+            e instanceof Error ? e.message : 'Failed to load NIfTI preview',
+          )
         }
       }
     })()
@@ -46,10 +50,10 @@ export function NiftiPreview({ file }: Props) {
   }, [file])
 
   return (
-    <div className="nifti-preview">
-      <p className="nifti-preview-caption">NIfTI preview (Niivue)</p>
-      {error ? <p className="form-error">{error}</p> : null}
-      <div ref={hostRef} className="nifti-preview-host" />
+    <div className="mt-6 rounded-xl border border-border bg-surface p-4">
+      <p className="mb-2 text-sm text-muted">NIfTI preview (Niivue)</p>
+      {error ? <p className="mb-2 text-sm text-danger">{error}</p> : null}
+      <div ref={hostRef} className="overflow-hidden rounded-lg" />
     </div>
   )
 }

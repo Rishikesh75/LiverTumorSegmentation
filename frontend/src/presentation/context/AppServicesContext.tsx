@@ -1,4 +1,4 @@
-import type { AppServices } from '@app/composition'
+import type { AppServices } from '@lib/composition'
 import { createContext, useContext, type ReactNode } from 'react'
 
 const AppServicesContext = createContext<AppServices | null>(null)

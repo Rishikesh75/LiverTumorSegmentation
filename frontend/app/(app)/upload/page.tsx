@@ -1,3 +1,5 @@
+'use client'
+
 import { createSegmentationJob } from '@application/use-cases/createSegmentationJob'
 import { uploadVolume } from '@application/use-cases/uploadVolume'
 import {
@@ -9,19 +11,30 @@ import { VolumeDropzone } from '@presentation/components/VolumeDropzone'
 import { useAuth } from '@presentation/context/AuthContext'
 import { useAppServices } from '@presentation/context/AppServicesContext'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { lazy, Suspense, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import dynamic from 'next/dynamic'
+import { useRouter } from 'next/navigation'
+import { useMemo, useState } from 'react'
 
-const NiftiPreview = lazy(() =>
-  import('@presentation/components/NiftiPreview').then((m) => ({
-    default: m.NiftiPreview,
-  })),
+const NiftiPreview = dynamic(
+  () =>
+    import('@presentation/components/NiftiPreview').then((m) => m.NiftiPreview),
+  {
+    ssr: false,
+    loading: () => (
+      <p className="mt-6 text-sm text-muted" role="status">
+        Loading NIfTI preview…
+      </p>
+    ),
+  },
 )
 
-export function UploadPage() {
+const inputClass =
+  'rounded-lg border border-border bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-violet-500'
+
+export default function UploadPage() {
   const { repos } = useAppServices()
   const { session } = useAuth()
-  const navigate = useNavigate()
+  const router = useRouter()
   const queryClient = useQueryClient()
   const [files, setFiles] = useState<File[] | null>(null)
   const [formatError, setFormatError] = useState<string | null>(null)
@@ -50,7 +63,7 @@ export function UploadPage() {
           : {}),
       })
       await queryClient.invalidateQueries({ queryKey: ['jobs'] })
-      navigate(`/jobs/${job.id}`)
+      router.push(`/jobs/${job.id}`)
     },
   })
 
@@ -72,45 +85,43 @@ export function UploadPage() {
     !uploadMut.isPending
 
   return (
-    <div className="page upload-page">
-      <header className="page-header">
-        <h1>Upload 3D volume</h1>
-        <p className="muted">
+    <div className="mx-auto max-w-3xl">
+      <header className="mb-8">
+        <h1 className="text-2xl font-semibold text-white">Upload 3D volume</h1>
+        <p className="mt-1 text-sm text-muted">
           NIfTI (single file) or DICOM (multiple .dcm files or one ZIP).
         </p>
       </header>
 
-      <VolumeDropzone onFilesSelected={onFilesSelected} disabled={uploadMut.isPending} />
+      <VolumeDropzone
+        onFilesSelected={onFilesSelected}
+        disabled={uploadMut.isPending}
+      />
 
-      {formatError ? <p className="form-error">{formatError}</p> : null}
+      {formatError ? (
+        <p className="mt-2 text-sm text-danger">{formatError}</p>
+      ) : null}
 
       {files && inferred === 'nifti' && files[0] ? (
-        <Suspense
-          fallback={
-            <p className="muted" role="status">
-              Loading NIfTI preview…
-            </p>
-          }
-        >
-          <NiftiPreview file={files[0]} />
-        </Suspense>
+        <NiftiPreview file={files[0]} />
       ) : null}
 
       {files && inferred === 'dicom' ? (
-        <div className="card dicom-placeholder">
-          <h2>DICOM</h2>
-          <p className="muted">
-            {files.length} file(s) selected. Full in-browser DICOM viewing can be
-            added with Cornerstone3D; for this build we validate the selection and
-            run the mock segmentation pipeline only.
+        <div className="mt-6 rounded-xl border border-border bg-surface p-6">
+          <h2 className="mb-2 font-medium text-white">DICOM</h2>
+          <p className="text-sm text-muted">
+            {files.length} file(s) selected. Full in-browser DICOM viewing can
+            be added with Cornerstone3D; for this build we validate the selection
+            and run the segmentation pipeline.
           </p>
         </div>
       ) : null}
 
-      <div className="card upload-actions">
-        <label className="field">
-          <span>Model</span>
+      <div className="mt-6 rounded-xl border border-border bg-surface p-6">
+        <label className="mb-4 flex flex-col gap-1 text-sm">
+          <span className="text-slate-300">Model</span>
           <select
+            className={inputClass}
             value={model}
             onChange={(e) => setModel(e.target.value as SegmentationModelType)}
             disabled={uploadMut.isPending}
@@ -124,7 +135,7 @@ export function UploadPage() {
         </label>
         <button
           type="button"
-          className="btn btn-primary"
+          className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
           disabled={!canSubmit}
           onClick={() => uploadMut.mutate()}
         >
@@ -133,7 +144,7 @@ export function UploadPage() {
       </div>
 
       {uploadMut.error ? (
-        <p className="form-error">
+        <p className="mt-3 text-sm text-danger">
           {uploadMut.error instanceof Error
             ? uploadMut.error.message
             : 'Upload failed'}
