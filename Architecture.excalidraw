@@ -30,12 +30,7 @@
       "index": "aF",
       "frameId": null,
       "roundness": null,
-      "boundElements": [
-        {
-          "id": "ZLjU_UWTGQcg5O6ZaSf5Q",
-          "type": "arrow"
-        }
-      ],
+      "boundElements": [],
       "updated": 1781934074090,
       "link": null,
       "locked": false
@@ -73,20 +68,7 @@
       "index": "aG",
       "frameId": null,
       "roundness": null,
-      "boundElements": [
-        {
-          "id": "hEIBcPXYi6Lqm_KNGiYEM",
-          "type": "arrow"
-        },
-        {
-          "id": "Yqwa7a3IE-QREYGjXjnde",
-          "type": "arrow"
-        },
-        {
-          "id": "ZLjU_UWTGQcg5O6ZaSf5Q",
-          "type": "arrow"
-        }
-      ],
+      "boundElements": [],
       "updated": 1781934259439,
       "link": null,
       "locked": false,
@@ -122,12 +104,7 @@
       "index": "aH",
       "frameId": null,
       "roundness": null,
-      "boundElements": [
-        {
-          "id": "ZLjU_UWTGQcg5O6ZaSf5Q",
-          "type": "arrow"
-        }
-      ],
+      "boundElements": [],
       "updated": 1781934081795,
       "link": null,
       "locked": false
@@ -165,12 +142,7 @@
       "index": "aI",
       "frameId": null,
       "roundness": null,
-      "boundElements": [
-        {
-          "id": "ZLjU_UWTGQcg5O6ZaSf5Q",
-          "type": "arrow"
-        }
-      ],
+      "boundElements": [],
       "updated": 1781934081795,
       "link": null,
       "locked": false,
@@ -618,16 +590,20 @@
         "type": 3
       },
       "seed": 763793063,
-      "version": 400,
-      "versionNonce": 1356263022,
+      "version": 401,
+      "versionNonce": 1246225215,
       "isDeleted": false,
       "boundElements": [
         {
           "id": "t0H2-sphe6LdYYBlARY3P",
           "type": "arrow"
+        },
+        {
+          "id": "69EcKVlrtORkU8eViv6o3",
+          "type": "arrow"
         }
       ],
-      "updated": 1781934025429,
+      "updated": 1781965988313,
       "link": null,
       "locked": false
     },
@@ -681,7 +657,7 @@
       "width": 385.85821533203125,
       "height": 113.24422534411923,
       "angle": 0,
-      "strokeColor": "#1e1e1e",
+      "strokeColor": "#2f9e44",
       "backgroundColor": "transparent",
       "fillStyle": "solid",
       "strokeWidth": 2,
@@ -693,11 +669,11 @@
       "index": "ah",
       "roundness": null,
       "seed": 284315879,
-      "version": 316,
-      "versionNonce": 1948475378,
+      "version": 318,
+      "versionNonce": 1044728721,
       "isDeleted": false,
       "boundElements": [],
-      "updated": 1781934047612,
+      "updated": 1781966426054,
       "link": null,
       "locked": false,
       "text": "Exposing the ML Models\nLiver Tumor Segmentation\nBrain Tumor Segmentation",
@@ -1288,12 +1264,7 @@
       "index": "aw",
       "frameId": null,
       "roundness": null,
-      "boundElements": [
-        {
-          "id": "Yqwa7a3IE-QREYGjXjnde",
-          "type": "arrow"
-        }
-      ],
+      "boundElements": [],
       "updated": 1781934093811,
       "link": null,
       "locked": false,
@@ -2223,6 +2194,206 @@
       "updated": 1781933955995,
       "link": null,
       "locked": false
+    },
+    {
+      "id": "wKdThJszMYjG57jCmiEuQ",
+      "type": "rectangle",
+      "x": 2280.9039420239064,
+      "y": 605.5751728407888,
+      "width": 682.4832536377111,
+      "height": 356.5722882362313,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0L",
+      "roundness": {
+        "type": 3
+      },
+      "seed": 1534844511,
+      "version": 355,
+      "versionNonce": 474207455,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "69EcKVlrtORkU8eViv6o3",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1781966169460,
+      "link": null,
+      "locked": false
+    },
+    {
+      "id": "_YpQyJkW35agj-sOFYu3P",
+      "type": "text",
+      "x": 2516.784996114576,
+      "y": -162.53981307250012,
+      "width": 19.819992065429688,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0M",
+      "roundness": null,
+      "seed": 1176949567,
+      "version": 4,
+      "versionNonce": 821299103,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1781965969545,
+      "link": null,
+      "locked": false,
+      "text": "Ml",
+      "fontSize": 20,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "Ml",
+      "autoResize": true,
+      "lineHeight": 1.25
+    },
+    {
+      "id": "69EcKVlrtORkU8eViv6o3",
+      "type": "arrow",
+      "x": 1785.638767014269,
+      "y": 792.0146493265083,
+      "width": 490.2488241239953,
+      "height": 29.09952181067854,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0N",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 1535022257,
+      "version": 212,
+      "versionNonce": 131326207,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1781966169460,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          490.2488241239953,
+          -29.09952181067854
+        ]
+      ],
+      "lastCommittedPoint": null,
+      "startBinding": {
+        "elementId": "GLLn-LRU60kZTDMzDWXaw",
+        "focus": -0.00296820510521839,
+        "gap": 11.463867733483767
+      },
+      "endBinding": {
+        "elementId": "wKdThJszMYjG57jCmiEuQ",
+        "focus": 0.2087715852500111,
+        "gap": 5.678003276930667
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false
+    },
+    {
+      "id": "9H0GJWmHsWjZni9JIS4pE",
+      "type": "text",
+      "x": 2308.346642892307,
+      "y": 644.9256108623592,
+      "width": 689.8437561798095,
+      "height": 45,
+      "angle": 0,
+      "strokeColor": "#e03131",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0Q",
+      "roundness": null,
+      "seed": 678593503,
+      "version": 245,
+      "versionNonce": 1751436127,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1781966072172,
+      "link": null,
+      "locked": false,
+      "text": "Liver Tumor Segmentation Model",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "Liver Tumor Segmentation Model",
+      "autoResize": false,
+      "lineHeight": 1.25
+    },
+    {
+      "id": "k9MC7vb3lajfIOAZ8Dl60",
+      "type": "text",
+      "x": 2383.152367989964,
+      "y": 714.4568608623592,
+      "width": 689.8437561798095,
+      "height": 180,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0R",
+      "roundness": null,
+      "seed": 272747985,
+      "version": 425,
+      "versionNonce": 473846961,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1781966157548,
+      "link": null,
+      "locked": false,
+      "text": "AttentionUnet\nEnsembleMethod\nUNet\nUNet++",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "AttentionUnet\nEnsembleMethod\nUNet\nUNet++",
+      "autoResize": false,
+      "lineHeight": 1.25
     }
   ],
   "appState": {
