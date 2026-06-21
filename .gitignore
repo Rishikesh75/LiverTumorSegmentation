@@ -100,3 +100,4 @@ res.txt
 frontend/.env.local
 frontend/.env.*.local
 
+.venv-1/
