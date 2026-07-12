@@ -7,8 +7,8 @@ SERVICE_DIR = BASE_DIR.parent
 # .../LiverTumorSegmentation
 PROJECT_ROOT = SERVICE_DIR.parent
 
-UPLOAD_DIR = PROJECT_ROOT / "backend" / "uploads"
-OUTPUT_DIR = PROJECT_ROOT / "backend" / "outputs"
+UPLOAD_DIR = SERVICE_DIR / "resources" / "uploads"
+OUTPUT_DIR = SERVICE_DIR / "resources" / "outputs"
 MODELS_DIR = BASE_DIR / "ml-models"
 
 VALID_MODELS = ["unet", "unet++", "attention", "trans-unet", "ensemble", "resunet"]
