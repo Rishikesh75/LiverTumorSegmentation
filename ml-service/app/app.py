@@ -6,7 +6,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from config.config import description, title, version
-from controllers import health, images, segmentation, upload
+from controllers import health, segmentation, volume_management
 from core.logger import setup_logging
 
 setup_logging()
@@ -20,8 +20,7 @@ app = FastAPI(
 
 app.include_router(health.router)
 app.include_router(segmentation.router)
-app.include_router(upload.router)
-app.include_router(images.router)
+app.include_router(volume_management.router)
 
 if __name__ == "__main__":
     logger.info("Starting Liver Tumor Segmentation ML Service...")

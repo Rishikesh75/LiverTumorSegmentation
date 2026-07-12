@@ -24,9 +24,3 @@ async def health_check():
         "status": "healthy",
         "service": "ML Inference Service",
     }
-
-
-@router.get("/models")
-async def get_available_models():
-    """Get list of available segmentation models."""
-    return {"models": model_service.list_available_models()}

@@ -55,3 +55,10 @@ async def segment_resunet(request: SegmentationRequest):
     except Exception as e:
         logger.error(f"Segmentation failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Segmentation failed: {str(e)}")
+    
+
+@router.get("/segmentation/models")
+async def get_available_models():
+    """Get list of available segmentation models."""
+    return {"models": model_service.list_available_models()}
+

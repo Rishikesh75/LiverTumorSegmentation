@@ -9,7 +9,7 @@ from config.config import UPLOAD_DIR
 logger = logging.getLogger(__name__)
 
 
-class UploadService:
+class VolumenManagement:
     @staticmethod
     def _is_supported_volume_file(filename: str) -> bool:
         lowered = filename.lower()
