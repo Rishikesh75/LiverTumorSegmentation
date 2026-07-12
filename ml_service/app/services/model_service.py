@@ -1,11 +1,16 @@
 import gc
 import logging
-
-import numpy as np
-from skimage.transform import resize
+import os
 from pathlib import Path
-from config.config import MODELS_DIR, OUTPUT_DIR, VALID_MODELS
+
+import keras
 import nibabel as nib
+import numpy as np
+import torch
+from skimage.transform import resize
+
+from config.config import MODELS_DIR, OUTPUT_DIR, VALID_MODELS
+from ml_models.models.AttentionUNet import AttentionUNet as ResUNet
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +24,7 @@ class ModelService:
         return VALID_MODELS
 
     def load_model(self, model_type: str):
-        """
-        Load the specified model.
-        Replace this with your actual model loading logic.
-        """
+
         logger.info(f"Loading {model_type} model...")
 
         model_paths = {
@@ -31,17 +33,74 @@ class ModelService:
             "attention": MODELS_DIR / "attention_model.h5",
             "trans-unet": MODELS_DIR / "trans_unet_model.h5",
             "ensemble": MODELS_DIR / "ensemble_weights.pkl",
+            "resunet": MODELS_DIR / "resunet_model.pth",
         }
 
-        # TODO: Load actual model
-        # Example for TensorFlow/Keras:
-        # if model_type in model_paths and model_paths[model_type].exists():
-        #     from tensorflow import keras
-        #     model = keras.models.load_model(str(model_paths[model_type]))
-        #     return model
+        if model_type not in model_paths:
+            raise ValueError(f"Unsupported model type: {model_type}")
 
-        logger.warning(f"Model loading not implemented yet for {model_type}")
-        return None
+        model_path: Path = model_paths[model_type]
+
+        if not model_path.exists():
+            raise FileNotFoundError(f"Model file not found: {model_path}")
+
+        suffix = model_path.suffix.lower()
+
+        try:
+            # ----------------------------
+            # TensorFlow / Keras Models
+            # ----------------------------
+            if suffix == ".h5":
+                logger.info(f"Loading Keras model from {model_path}")
+                model = keras.models.load_model(str(model_path), compile=False)
+                logger.info("Keras model loaded successfully.")
+                return model
+
+            # ----------------------------
+            # PyTorch Models
+            # ----------------------------
+            elif suffix == ".pth":
+                logger.info(f"Loading PyTorch model from {model_path}")
+
+                device = torch.device(
+                    "cuda" if torch.cuda.is_available() else "cpu"
+                )
+
+                # Instantiate your model architecture
+                model = ResUNet()   # <-- Replace with your actual class
+
+                state_dict = torch.load(
+                    model_path,
+                    map_location=device,
+                )
+
+                model.load_state_dict(state_dict)
+                model.to(device)
+                model.eval()
+
+                logger.info("PyTorch model loaded successfully.")
+                return model
+
+            # ----------------------------
+            # Ensemble Model
+            # ----------------------------
+            elif suffix == ".pkl":
+                import pickle
+
+                logger.info(f"Loading ensemble weights from {model_path}")
+
+                with open(model_path, "rb") as f:
+                    model = pickle.load(f)
+
+                logger.info("Ensemble model loaded successfully.")
+                return model
+
+            else:
+                raise ValueError(f"Unsupported model format: {suffix}")
+
+        except Exception as e:
+            logger.exception(f"Failed to load model {model_type}: {e}")
+            raise
 
     def infer(self, model, image):
         """

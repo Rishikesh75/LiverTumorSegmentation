@@ -6,12 +6,12 @@ from fastapi.responses import FileResponse
 
 from schemas.segmentation_request_schema import SegmentationRequest
 from services.segmentation_service import SegmentationService
-
+from services.model_service import ModelService
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["segmentation"])
 segmentation_service = SegmentationService()
-
+model_service = ModelService()  # Access the model service for listing available models
 
 @router.post("/segment")
 async def segment_image(request: SegmentationRequest):
