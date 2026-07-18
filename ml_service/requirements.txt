@@ -1,0 +1,28 @@
+# FastAPI and Web Server
+fastapi==0.108.0
+uvicorn[standard]==0.25.0
+python-multipart==0.0.6
+pydantic==2.5.0
+
+# Image Processing
+pillow==10.1.0
+opencv-python-headless==4.8.1.78
+scikit-image==0.22.0
+
+# Machine Learning Frameworks
+numpy==1.26.4
+tensorflow==2.16.2
+keras==3.0.5
+
+# PyTorch (Python 3.12 compatible)
+torch==2.5.1
+torchvision==0.20.1
+
+# Utilities
+requests==2.31.0
+python-dotenv==1.0.0
+
+# Development (optional)
+pytest==7.4.3
+httpx==0.25.2
+

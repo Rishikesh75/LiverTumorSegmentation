@@ -78,7 +78,7 @@ Thumbs.db
 *~
 
 # Docker
-.env
+.segmentation_env
 .env.local
 docker-compose.override.yml
 
