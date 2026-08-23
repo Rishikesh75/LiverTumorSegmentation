@@ -3,199 +3,145 @@ import logging
 import os
 from pathlib import Path
 
-import keras
 import nibabel as nib
 import numpy as np
 import torch
 from skimage.transform import resize
 
-from config.config import MODELS_DIR, OUTPUT_DIR, VALID_MODELS
-from ml_models.models.AttentionUNet import AttentionUNet as ResUNet
+from config.config import (
+    DEFAULT_MODEL,
+    IMG_SIZE,
+    INFERENCE_BATCH_SIZE,
+    MODELS_DIR,
+    MODEL_FILENAME,
+    OUTPUT_DIR,
+    VALID_MODELS,
+)
+from ml_models.models.AttentionUNet import AttentionUNet
 
 logger = logging.getLogger(__name__)
 
 
 class ModelService:
+    def __init__(self):
+        self._model = None
+        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    @property
+    def device(self) -> torch.device:
+        return self._device
+
+    @property
+    def is_loaded(self) -> bool:
+        return self._model is not None
+
     def validate_model_type(self, model_type: str) -> None:
         if model_type not in VALID_MODELS:
             raise ValueError(f"Invalid model type. Must be one of: {VALID_MODELS}")
 
     def list_available_models(self) -> list[str]:
-        return VALID_MODELS
+        return list(VALID_MODELS)
 
-    def load_model(self, model_type: str):
+    def get_model(self):
+        if self._model is None:
+            self._model = self.load_model()
+        return self._model
 
-        logger.info(f"Loading {model_type} model...")
-
-        model_paths = {
-            "unet": MODELS_DIR / "unet_model.h5",
-            "unet++": MODELS_DIR / "unet_plus_plus_model.h5",
-            "attention": MODELS_DIR / "attention_model.h5",
-            "trans-unet": MODELS_DIR / "trans_unet_model.h5",
-            "ensemble": MODELS_DIR / "ensemble_weights.pkl",
-            "resunet": MODELS_DIR / "resunet_model.pth",
-        }
-
-        if model_type not in model_paths:
-            raise ValueError(f"Unsupported model type: {model_type}")
-
-        model_path: Path = model_paths[model_type]
-
+    def load_model(self, model_type: str = DEFAULT_MODEL):
+        self.validate_model_type(model_type)
+        model_path = MODELS_DIR / MODEL_FILENAME
         if not model_path.exists():
             raise FileNotFoundError(f"Model file not found: {model_path}")
 
-        suffix = model_path.suffix.lower()
+        logger.info("Loading %s from %s on %s", model_type, model_path, self._device)
+        model = AttentionUNet(in_channels=1, out_channels=3)
+        checkpoint = torch.load(model_path, map_location=self._device, weights_only=True)
 
-        try:
-            # ----------------------------
-            # TensorFlow / Keras Models
-            # ----------------------------
-            if suffix == ".h5":
-                logger.info(f"Loading Keras model from {model_path}")
-                model = keras.models.load_model(str(model_path), compile=False)
-                logger.info("Keras model loaded successfully.")
-                return model
+        if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
+            state_dict = checkpoint["model_state_dict"]
+        elif isinstance(checkpoint, dict) and "state_dict" in checkpoint:
+            state_dict = checkpoint["state_dict"]
+        else:
+            state_dict = checkpoint
 
-            # ----------------------------
-            # PyTorch Models
-            # ----------------------------
-            elif suffix == ".pth":
-                logger.info(f"Loading PyTorch model from {model_path}")
+        model.load_state_dict(state_dict)
+        model.to(self._device)
+        model.eval()
+        logger.info("PyTorch model loaded successfully")
+        return model
 
-                device = torch.device(
-                    "cuda" if torch.cuda.is_available() else "cpu"
-                )
-
-                # Instantiate your model architecture
-                model = ResUNet()   # <-- Replace with your actual class
-
-                state_dict = torch.load(
-                    model_path,
-                    map_location=device,
-                )
-
-                model.load_state_dict(state_dict)
-                model.to(device)
-                model.eval()
-
-                logger.info("PyTorch model loaded successfully.")
-                return model
-
-            # ----------------------------
-            # Ensemble Model
-            # ----------------------------
-            elif suffix == ".pkl":
-                import pickle
-
-                logger.info(f"Loading ensemble weights from {model_path}")
-
-                with open(model_path, "rb") as f:
-                    model = pickle.load(f)
-
-                logger.info("Ensemble model loaded successfully.")
-                return model
-
-            else:
-                raise ValueError(f"Unsupported model format: {suffix}")
-
-        except Exception as e:
-            logger.exception(f"Failed to load model {model_type}: {e}")
-            raise
-
-    def infer(self, model, image):
-        """
-        Perform model inference.
-        Replace with your actual inference logic.
-        """
-        logger.info("Performing inference...")
-
-        # TODO: Implement actual inference
-        # Example:
-        # prediction = model.predict(np.expand_dims(image, axis=0))
-        # return prediction[0]
-
-        return image
-    
     def preprocess(self, volume: np.ndarray) -> np.ndarray:
-        """
-        Preprocess the input volume for model inference.
-        This normalizes intensity values and resizes slices to the model's expected size.
-        """
         logger.info("Preprocessing volume")
+        volume = np.squeeze(np.asarray(volume, dtype=np.float32))
+        if volume.ndim != 3:
+            raise ValueError(f"Expected a 3D volume, got shape {volume.shape}")
 
-        volume = np.asarray(volume, dtype=np.float32)
+        vmin = float(volume.min())
+        vmax = float(volume.max())
+        volume = (volume - vmin) / (vmax - vmin + 1e-6)
 
-        # Simple normalization by percentile clipping for medical scans.
-        if volume.size > 0:
-            lower = np.percentile(volume, 1)
-            upper = np.percentile(volume, 99)
-            volume = np.clip(volume, lower, upper)
-            volume = (volume - lower) / (upper - lower + 1e-6)
-
-        # Resize to a manageable 2D slice size expected by the segmentation model.
-        if volume.ndim == 3:
-            resized_slices = [
-                resize(slice_2d, (128, 128), mode="constant", preserve_range=True)
-                for slice_2d in volume.transpose(2, 0, 1)
-            ]
-            volume = np.stack(resized_slices, axis=0).transpose(1, 2, 0).astype(np.float32)
-        elif volume.ndim == 2:
-            volume = resize(volume, (128, 128), mode="constant", preserve_range=True).astype(
-                np.float32
+        slices = [
+            resize(
+                slc,
+                IMG_SIZE,
+                mode="constant",
+                preserve_range=True,
+                anti_aliasing=True,
             )
+            for slc in volume.transpose(2, 0, 1)
+        ]
+        stacked = np.stack(slices, axis=0).astype(np.float32)
+        return stacked.transpose(1, 2, 0)
 
-        return volume
+    def infer(self, model, image: np.ndarray) -> np.ndarray:
+        logger.info("Performing inference...")
+        if image.ndim != 3:
+            raise ValueError(f"Expected preprocessed volume (H, W, D), got {image.shape}")
+
+        height, width, depth = image.shape
+        labels = np.empty((height, width, depth), dtype=np.uint8)
+
+        with torch.no_grad():
+            for start in range(0, depth, INFERENCE_BATCH_SIZE):
+                end = min(start + INFERENCE_BATCH_SIZE, depth)
+                batch = np.transpose(image[:, :, start:end], (2, 0, 1))
+                tensor = torch.from_numpy(batch).unsqueeze(1).to(self._device)
+                logits = model(tensor)
+                pred = torch.argmax(logits, dim=1).cpu().numpy().astype(np.uint8)
+                labels[:, :, start:end] = np.transpose(pred, (1, 2, 0))
+
+        return labels
 
     def postprocess(self, prediction: np.ndarray, original_shape: tuple[int, ...]) -> np.ndarray:
-        """
-        Postprocess the model output and resize it back to the original volume shape.
-        """
         logger.info("Postprocessing result...")
+        prediction = np.squeeze(np.asarray(prediction))
+        original_shape = tuple(int(size) for size in original_shape[:3])
 
-        prediction = np.asarray(prediction)
+        if prediction.shape == original_shape:
+            return prediction.astype(np.uint8)
 
-        if prediction.ndim > len(original_shape):
-            prediction = np.squeeze(prediction)
+        if prediction.ndim != 3:
+            raise ValueError(f"Expected 3D prediction, got shape {prediction.shape}")
 
-        if prediction.shape != original_shape:
-            # Resize slice-by-slice to reduce peak memory usage on large 3D volumes.
-            if prediction.ndim == 3 and len(original_shape) == 3:
-                original_h, original_w, original_d = original_shape
-                pred_h, pred_w, pred_d = prediction.shape
-                if pred_d != original_d:
-                    raise ValueError(
-                        "Prediction depth does not match original depth: "
-                        f"{pred_d} != {original_d}"
-                    )
+        original_h, original_w, original_d = original_shape
+        if prediction.shape[2] != original_d:
+            raise ValueError(
+                "Prediction depth does not match original depth: "
+                f"{prediction.shape[2]} != {original_d}"
+            )
 
-                resized_prediction = np.empty(original_shape, dtype=np.float32)
-                for idx in range(original_d):
-                    resized_prediction[:, :, idx] = resize(
-                        prediction[:, :, idx],
-                        (original_h, original_w),
-                        order=0,
-                        mode="edge",
-                        anti_aliasing=False,
-                        preserve_range=True,
-                    ).astype(np.float32)
+        resized_prediction = np.empty(original_shape, dtype=np.uint8)
+        for idx in range(original_d):
+            resized_prediction[:, :, idx] = resize(
+                prediction[:, :, idx],
+                (original_h, original_w),
+                order=0,
+                mode="edge",
+                anti_aliasing=False,
+                preserve_range=True,
+            ).astype(np.uint8)
 
-                prediction = resized_prediction
-            else:
-                # Fallback for non-3D shapes.
-                prediction = resize(
-                    prediction,
-                    original_shape,
-                    order=0,
-                    mode="edge",
-                    anti_aliasing=False,
-                    preserve_range=True,
-                ).astype(np.float32)
-
-        if prediction.dtype != np.uint8:
-            prediction = np.clip(prediction, 0, 1)
-            prediction = (prediction * 255).astype(np.uint8)
-
-        return prediction
+        return resized_prediction
 
     def save_segmentation_result(
         self,
@@ -210,7 +156,6 @@ class ModelService:
         )
         output_path = OUTPUT_DIR / output_filename
 
-        # Preserve affine/orientation metadata for the output file.
         output_image = nib.Nifti1Image(
             np.asarray(result, dtype=np.uint8),
             affine=original_image.affine,
@@ -220,7 +165,8 @@ class ModelService:
         del output_image
         gc.collect()
 
-        logger.info(f"Segmentation result saved: {output_filename}")
+        logger.info("Segmentation result saved: %s", output_filename)
         return str(output_path)
 
 
+model_service = ModelService()
