@@ -32,6 +32,8 @@ logs/
 # Uploads and outputs (handled by volumes)
 uploads/
 outputs/
+resources/uploads/
+resources/outputs/
 
 # Old reference files
 ml_inference_old.py

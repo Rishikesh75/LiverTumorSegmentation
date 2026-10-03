@@ -1,10 +1,10 @@
-# Multi-stage Dockerfile for Python ML Service
-FROM python:3.10-slim AS base
+FROM python:3.10-slim
 
-# Set working directory
 WORKDIR /app
+ENV PYTHONUNBUFFERED=1 \
+  PYTHONDONTWRITEBYTECODE=1 \
+  PYTHONPATH=/app:/app/ml_service/app
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     libsm6 \
@@ -14,27 +14,18 @@ RUN apt-get update && apt-get install -y \
     libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
+COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY app.py .
+COPY app/ ./ml_service/app/
 
-# Copy utils directory (even if empty)
-COPY utils/ ./utils/
+RUN mkdir -p /app/ml_service/resources/uploads /app/ml_service/resources/outputs
 
-# Create necessary directories
-RUN mkdir -p /app/uploads /app/outputs /app/models
+EXPOSE 5001
 
-# Expose port
-EXPOSE 5000
-
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD python -c "import requests; requests.get('http://localhost:5000/health')" || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5001/health', timeout=5)" || exit 1
 
-# Run the application
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5000", "--log-level", "info"]
+CMD ["uvicorn", "app:app", "--app-dir", "/app/ml_service/app", "--host", "0.0.0.0", "--port", "5001", "--log-level", "info"]
 

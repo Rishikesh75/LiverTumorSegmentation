@@ -6,19 +6,20 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
 
-from config.config import description, title, version
+from config.config import DEFAULT_MODEL, description, title, version
 from controllers import health, segmentation, volume_management
 from core.logger import setup_logging
 from services.model_service import model_service
 
+# setting up logging configuration
 setup_logging()
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    logger.info("Warming up %s model...", model_service.list_available_models()[0])
-    model_service.get_model()
+    logger.info("Warming up %s model...", DEFAULT_MODEL)
+    model_service.get_model(DEFAULT_MODEL)
     logger.info("Model ready on %s", model_service.device)
     yield
 

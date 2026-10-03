@@ -21,7 +21,7 @@ class SegmentationService:
         self.model_service.validate_model_type(model_type)
         input_path = self.volume_management_service.get_volume_input_path(image_path)
 
-        model = self.model_service.get_model()
+        model = self.model_service.get_model(model_type)
         original_image, volume = self.volume_management_service.load_volume(input_path)
         volume = np.squeeze(np.asarray(volume, dtype=np.float32))
         if volume.ndim != 3:

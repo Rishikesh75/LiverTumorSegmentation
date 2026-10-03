@@ -12,19 +12,19 @@ from config.config import (
     DEFAULT_MODEL,
     IMG_SIZE,
     INFERENCE_BATCH_SIZE,
+    MODEL_REGISTRY,
     MODELS_DIR,
-    MODEL_FILENAME,
     OUTPUT_DIR,
-    VALID_MODELS,
 )
-from ml_models.models.AttentionUNet import AttentionUNet
 
 logger = logging.getLogger(__name__)
 
 
+
+
 class ModelService:
     def __init__(self):
-        self._model = None
+        self._models: dict[str, torch.nn.Module] = {}
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     @property
@@ -33,28 +33,32 @@ class ModelService:
 
     @property
     def is_loaded(self) -> bool:
-        return self._model is not None
+        return bool(self._models)
 
     def validate_model_type(self, model_type: str) -> None:
-        if model_type not in VALID_MODELS:
-            raise ValueError(f"Invalid model type. Must be one of: {VALID_MODELS}")
+        if model_type not in MODEL_REGISTRY:
+            raise ValueError(
+                f"Invalid model type. Must be one of: {list(MODEL_REGISTRY)}"
+            )
 
     def list_available_models(self) -> list[str]:
-        return list(VALID_MODELS)
+        return list(MODEL_REGISTRY)
 
-    def get_model(self):
-        if self._model is None:
-            self._model = self.load_model()
-        return self._model
+    def get_model(self, model_type: str = DEFAULT_MODEL) -> torch.nn.Module:
+        self.validate_model_type(model_type)
+        if model_type not in self._models:
+            self._models[model_type] = self.load_model(model_type)
+        return self._models[model_type]
 
     def load_model(self, model_type: str = DEFAULT_MODEL):
         self.validate_model_type(model_type)
-        model_path = MODELS_DIR / MODEL_FILENAME
+        model_factory, checkpoint_filename = MODEL_REGISTRY[model_type]
+        model_path = MODELS_DIR / checkpoint_filename
         if not model_path.exists():
             raise FileNotFoundError(f"Model file not found: {model_path}")
 
         logger.info("Loading %s from %s on %s", model_type, model_path, self._device)
-        model = AttentionUNet(in_channels=1, out_channels=3)
+        model = model_factory()
         checkpoint = torch.load(model_path, map_location=self._device, weights_only=True)
 
         if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:

@@ -4,17 +4,18 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
-from schemas.segmentation_request_schema import SegmentationRequest
+from ml_service.app.services import volume_management_service
+from models.segmentation_request_schema import SegmentationRequest
 from services.model_service import model_service
 from services.segmentation_service import SegmentationService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["segmentation"])
+router = APIRouter(prefix="/segment",tags=["segmentation"])
 segmentation_service = SegmentationService()
 
 
-@router.post("/segment")
+@router.post("/")
 async def segment_image(request: SegmentationRequest):
     """
     Perform segmentation on the uploaded volume and return the generated .nii.gz file.
@@ -39,7 +40,9 @@ async def segment_image(request: SegmentationRequest):
         raise HTTPException(status_code=500, detail=f"Segmentation failed: {str(e)}")
 
 
-@router.get("/segmentation/models")
+@router.get("/models")
 async def get_available_models():
     """Get list of available segmentation models."""
     return {"models": model_service.list_available_models()}
+
+

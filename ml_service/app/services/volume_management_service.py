@@ -10,7 +10,7 @@ import numpy as np
 from fastapi import UploadFile
 
 from config.config import OUTPUT_DIR, UPLOAD_DIR
-from schemas.volume_schema import VolumePathResponse, VolumeUploadResponse
+from models.volume_schema import VolumePathResponse, VolumeUploadResponse
 
 logger = logging.getLogger(__name__)
 
