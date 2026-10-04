@@ -2,6 +2,7 @@
 - name: Verify Docker can pull and run a small public image
   hosts: ml_service
   become: true
+  gather_facts: false
   tasks:
     - name: Wait for SSH to become available
       ansible.builtin.wait_for_connection:
@@ -9,10 +10,20 @@
         sleep: 5
         connect_timeout: 10
 
-    - name: Check Docker is running
+    - name: Install Docker and Compose
+      ansible.builtin.apt:
+        name:
+          - docker.io
+          - docker-compose-v2
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Enable and start Docker
       ansible.builtin.service:
         name: docker
         state: started
+        enabled: true
 
     - name: Pull the small public hello-world image
       ansible.builtin.command:

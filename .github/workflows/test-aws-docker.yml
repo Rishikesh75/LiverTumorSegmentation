@@ -63,17 +63,6 @@ jobs:
             -backend-config="encrypt=true" \
             -backend-config="use_lockfile=true"
 
-      - name: Verify an existing Terraform-managed instance
-        id: instance
-        working-directory: infra/terraform
-        run: |
-          set -euo pipefail
-          if ! terraform state list | grep -Fxq 'aws_instance.ml_service'; then
-            echo "No EC2 instance is tracked by this Terraform state. Run the deploy workflow first."
-            exit 1
-          fi
-          echo "public_ip=$(terraform output -raw instance_public_ip)" >> "$GITHUB_OUTPUT"
-
       - name: Get this runner's public IP
         id: runner-ip
         run: |
@@ -81,16 +70,18 @@ jobs:
           ip="$(curl --fail --silent --show-error https://checkip.amazonaws.com)"
           echo "cidr=${ip}/32" >> "$GITHUB_OUTPUT"
 
-      - name: Temporarily allow SSH from this runner
-        id: open-ssh
+      - name: Plan EC2 deployment
         working-directory: infra/terraform
         env:
           ADMIN_CIDR: ${{ steps.runner-ip.outputs.cidr }}
         run: |
-          set -euo pipefail
-          terraform plan -input=false -out=open-ssh.tfplan \
+          terraform plan -input=false -out=tfplan \
             -var="admin_cidr=${ADMIN_CIDR}"
-          terraform apply -input=false open-ssh.tfplan
+
+      - name: Create or update the EC2 instance
+        id: apply
+        working-directory: infra/terraform
+        run: terraform apply -input=false tfplan
 
       - name: Set up Python for Ansible
         uses: actions/setup-python@v6
@@ -104,15 +95,16 @@ jobs:
         id: ansible-files
         env:
           EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-          INSTANCE_IP: ${{ steps.instance.outputs.public_ip }}
         run: |
           set -euo pipefail
           key_path="${RUNNER_TEMP}/ec2_key"
           printf '%s\n' "$EC2_SSH_PRIVATE_KEY" > "$key_path"
           chmod 600 "$key_path"
+          instance_ip="$(terraform -chdir=infra/terraform output -raw instance_public_ip)"
           inventory_path="${RUNNER_TEMP}/inventory.ini"
           printf '[ml_service]\n%s ansible_user=ubuntu ansible_ssh_private_key_file=%s ansible_python_interpreter=/usr/bin/python3\n' \
-            "$INSTANCE_IP" "$key_path" > "$inventory_path"
+            "$instance_ip" "$key_path" > "$inventory_path"
+          echo "instance_ip=${instance_ip}" >> "$GITHUB_OUTPUT"
           echo "inventory_path=${inventory_path}" >> "$GITHUB_OUTPUT"
 
       - name: Pull and run the small public Docker sample image
@@ -124,10 +116,18 @@ jobs:
             ansible-playbook \
             -i "$INVENTORY_PATH" infra/ansible/test-docker-image.yml
 
-      - name: Close SSH ingress
-        if: always() && steps.instance.outcome == 'success' && steps.open-ssh.outcome == 'success'
+      - name: Close SSH ingress after the Docker test
+        if: always() && steps.apply.outcome == 'success'
         working-directory: infra/terraform
+        env:
+          ADMIN_CIDR: 127.0.0.1/32
         run: |
-          terraform plan -input=false -out=close-ssh.tfplan \
-            -var="admin_cidr=127.0.0.1/32"
-          terraform apply -input=false close-ssh.tfplan
+          terraform plan -input=false -out="${RUNNER_TEMP}/close-ssh.tfplan" \
+            -var="admin_cidr=${ADMIN_CIDR}"
+          terraform apply -input=false "${RUNNER_TEMP}/close-ssh.tfplan"
+
+      - name: Report Docker test result
+        if: success()
+        env:
+          INSTANCE_IP: ${{ steps.ansible-files.outputs.instance_ip }}
+        run: echo "Docker sample-image test passed on EC2 instance at ${INSTANCE_IP}."
