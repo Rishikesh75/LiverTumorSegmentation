@@ -85,13 +85,42 @@
         'Recreated' in compose_result.stdout or
         'Recreate' in compose_result.stdout
 
-    - name: Wait for the ML API to become healthy
-      ansible.builtin.uri:
-        url: http://127.0.0.1:5001/health
-        method: GET
-        status_code: 200
-        return_content: true
-      register: health_check
-      until: health_check.json.status | default('') == 'healthy'
-      retries: 30
-      delay: 10
+    - name: Verify that the ML API becomes healthy
+      block:
+        - name: Wait for the ML API to become healthy
+          ansible.builtin.uri:
+            url: http://127.0.0.1:5001/health
+            method: GET
+            status_code: 200
+            return_content: true
+          register: health_check
+          until: health_check.json.status | default('') == 'healthy'
+          retries: 30
+          delay: 10
+
+      rescue:
+        - name: Inspect the ML service container after health check failure
+          ansible.builtin.command:
+            cmd: docker inspect liver-segmentation-ml-service
+          register: container_inspect
+          changed_when: false
+          failed_when: false
+
+        - name: Show ML service container state
+          ansible.builtin.debug:
+            msg: "{{ container_inspect.stdout | default('Container inspect returned no output.') }}"
+
+        - name: Read recent ML service container logs
+          ansible.builtin.command:
+            cmd: docker logs --tail 200 liver-segmentation-ml-service
+          register: container_logs
+          changed_when: false
+          failed_when: false
+
+        - name: Show recent ML service container logs
+          ansible.builtin.debug:
+            msg: "{{ container_logs.stdout | default('') }}{{ container_logs.stderr | default('') }}"
+
+        - name: Fail deployment when the ML API is unhealthy
+          ansible.builtin.fail:
+            msg: "The ML API did not become healthy at http://127.0.0.1:5001/health. Container state and recent logs are shown above."

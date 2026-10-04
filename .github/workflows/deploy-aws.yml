@@ -84,6 +84,7 @@ jobs:
           terraform_version: 1.10.5
 
       - name: Initialize Terraform with persistent S3 state
+        id: terraform-init
         working-directory: infra/terraform
         run: |
           terraform init -input=false -reconfigure \
@@ -157,7 +158,11 @@ jobs:
           echo "API endpoint: http://${INSTANCE_IP}:5001/health"
 
       - name: Close SSH ingress after deployment
-        if: inputs.operation == 'deploy'
+        if: >-
+          always() &&
+          inputs.operation == 'deploy' &&
+          steps.terraform-init.outcome == 'success' &&
+          steps.runner-ip.outcome == 'success'
         working-directory: infra/terraform
         run: |
           terraform plan -input=false -out=close-ssh.tfplan \
