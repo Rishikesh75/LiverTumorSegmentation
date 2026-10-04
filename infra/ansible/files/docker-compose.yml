@@ -1,0 +1,14 @@
+services:
+  ml-service:
+    image: "{{ ghcr_image }}"
+    container_name: liver-segmentation-ml-service
+    ports:
+      - "5001:5001"
+    environment:
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ml-service-data:/app/ml_service/resources
+    restart: unless-stopped
+
+volumes:
+  ml-service-data:

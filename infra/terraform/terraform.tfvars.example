@@ -1,0 +1,4 @@
+aws_region       = "us-east-1"
+ssh_key_name     = "your-existing-ec2-key-pair"
+admin_cidr       = "203.0.113.10/32"
+api_allowed_cidr = "203.0.113.10/32"

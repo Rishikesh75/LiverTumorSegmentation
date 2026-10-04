@@ -1,0 +1,179 @@
+name: Deploy or destroy ML service on AWS
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Choose whether to deploy or destroy the AWS service
+        required: true
+        type: choice
+        options:
+          - deploy
+          - destroy
+      image_tag:
+        description: GHCR image tag to deploy (for example latest or a commit SHA)
+        required: false
+        default: latest
+        type: string
+      confirm_destroy:
+        description: Type DESTROY to approve the destroy operation
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  packages: read
+
+concurrency:
+  group: liver-segmentation-aws
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+  TF_VAR_aws_region: ${{ vars.AWS_REGION }}
+  TF_VAR_ssh_key_name: ${{ vars.EC2_KEY_PAIR_NAME }}
+  TF_VAR_api_allowed_cidr: ${{ vars.API_ALLOWED_CIDR }}
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+jobs:
+  deploy-or-destroy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate deployment settings
+        env:
+          OPERATION: ${{ inputs.operation }}
+          CONFIRM_DESTROY: ${{ inputs.confirm_destroy }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+          EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$AWS_ROLE_ARN" || { echo "Set the AWS_ROLE_ARN repository secret."; exit 1; }
+          test -n "$AWS_REGION" || { echo "Set the AWS_REGION repository variable."; exit 1; }
+          test -n "$TF_STATE_BUCKET" || { echo "Set the TF_STATE_BUCKET repository variable."; exit 1; }
+          test -n "$TF_VAR_ssh_key_name" || { echo "Set the EC2_KEY_PAIR_NAME repository variable."; exit 1; }
+          test -n "$TF_VAR_api_allowed_cidr" || { echo "Set the API_ALLOWED_CIDR repository variable."; exit 1; }
+          if [ "$OPERATION" = "deploy" ]; then
+            test -n "$EC2_SSH_PRIVATE_KEY" || { echo "Set the EC2_SSH_PRIVATE_KEY repository secret."; exit 1; }
+            [[ "$IMAGE_TAG" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]] || {
+              echo "image_tag must be a valid container tag."
+              exit 1
+            }
+          fi
+          if [ "$OPERATION" = "destroy" ] && [ "$CONFIRM_DESTROY" != "DESTROY" ]; then
+            echo "To destroy AWS resources, enter DESTROY in the confirm_destroy field."
+            exit 1
+          fi
+
+      - name: Configure AWS credentials with GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.10.5
+
+      - name: Initialize Terraform with persistent S3 state
+        working-directory: infra/terraform
+        run: |
+          terraform init -input=false -reconfigure \
+            -backend-config="bucket=${TF_STATE_BUCKET}" \
+            -backend-config="key=infra/terraform/terraform.tfstate" \
+            -backend-config="region=${AWS_REGION}" \
+            -backend-config="encrypt=true" \
+            -backend-config="use_lockfile=true"
+
+      - name: Get this runner's public IP
+        if: inputs.operation == 'deploy'
+        id: runner-ip
+        run: |
+          set -euo pipefail
+          ip="$(curl --fail --silent --show-error https://checkip.amazonaws.com)"
+          echo "cidr=${ip}/32" >> "$GITHUB_OUTPUT"
+
+      - name: Plan deployment
+        if: inputs.operation == 'deploy'
+        working-directory: infra/terraform
+        env:
+          ADMIN_CIDR: ${{ steps.runner-ip.outputs.cidr }}
+        run: |
+          terraform plan -input=false -out=tfplan \
+            -var="admin_cidr=${ADMIN_CIDR}"
+          terraform apply -input=false tfplan
+
+      - name: Write SSH key and Ansible inventory
+        if: inputs.operation == 'deploy'
+        id: ansible-files
+        env:
+          EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          key_path="${RUNNER_TEMP}/ec2_key"
+          printf '%s\n' "$EC2_SSH_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+          instance_ip="$(terraform -chdir=infra/terraform output -raw instance_public_ip)"
+          inventory_path="${RUNNER_TEMP}/inventory.ini"
+          printf '[ml_service]\n%s ansible_user=ubuntu ansible_ssh_private_key_file=%s ansible_python_interpreter=/usr/bin/python3\n' \
+            "$instance_ip" "$key_path" > "$inventory_path"
+          echo "instance_ip=${instance_ip}" >> "$GITHUB_OUTPUT"
+          echo "inventory_path=${inventory_path}" >> "$GITHUB_OUTPUT"
+          echo "key_path=${key_path}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python for Ansible
+        if: inputs.operation == 'deploy'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ansible
+        if: inputs.operation == 'deploy'
+        run: python -m pip install --disable-pip-version-check ansible-core
+
+      - name: Deploy the published GHCR image
+        if: inputs.operation == 'deploy'
+        env:
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          INVENTORY_PATH: ${{ steps.ansible-files.outputs.inventory_path }}
+          INSTANCE_IP: ${{ steps.ansible-files.outputs.instance_ip }}
+          KEY_PATH: ${{ steps.ansible-files.outputs.key_path }}
+        run: |
+          set -euo pipefail
+          ANSIBLE_SSH_COMMON_ARGS="-o UserKnownHostsFile=${RUNNER_TEMP}/known_hosts -o StrictHostKeyChecking=accept-new" \
+            ansible-playbook \
+            -i "$INVENTORY_PATH" infra/ansible/deploy.yml \
+            --extra-vars "ghcr_image=ghcr.io/rishikesh75/livertumorsegmentation:${IMAGE_TAG}"
+          echo "API endpoint: http://${INSTANCE_IP}:5001/health"
+
+      - name: Close SSH ingress after deployment
+        if: inputs.operation == 'deploy'
+        working-directory: infra/terraform
+        run: |
+          terraform plan -input=false -out=close-ssh.tfplan \
+            -var="admin_cidr=127.0.0.1/32"
+          terraform apply -input=false close-ssh.tfplan
+
+      - name: Plan AWS resource destruction
+        if: inputs.operation == 'destroy'
+        working-directory: infra/terraform
+        run: |
+          terraform plan -input=false -destroy -out=tfplan \
+            -var="admin_cidr=127.0.0.1/32"
+          terraform apply -input=false tfplan
+
+      - name: Report cleanup
+        if: inputs.operation == 'destroy'
+        run: |
+          echo "EC2 instance, security group, and attached disk managed by this Terraform state were destroyed."
+          echo "The S3 Terraform state bucket and GHCR image are retained."

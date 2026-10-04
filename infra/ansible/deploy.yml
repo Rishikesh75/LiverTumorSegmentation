@@ -1,0 +1,97 @@
+---
+- name: Deploy the liver segmentation ML service
+  hosts: ml_service
+  become: true
+  vars:
+    app_dir: /opt/liver-tumor-segmentation
+    ghcr_image: ghcr.io/rishikesh75/livertumorsegmentation:latest
+    ghcr_username: "{{ lookup('ansible.builtin.env', 'GHCR_USERNAME') }}"
+    ghcr_token: "{{ lookup('ansible.builtin.env', 'GHCR_TOKEN') }}"
+
+  tasks:
+    - name: Wait for SSH to become available
+      ansible.builtin.wait_for_connection:
+        timeout: 600
+        sleep: 5
+        connect_timeout: 10
+
+    - name: Install Docker and Compose
+      ansible.builtin.apt:
+        name:
+          - docker.io
+          - docker-compose-v2
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Enable and start Docker
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Validate optional GHCR credentials
+      ansible.builtin.assert:
+        that:
+          - >-
+            (ghcr_username | length == 0 and ghcr_token | length == 0) or
+            (ghcr_username | length > 0 and ghcr_token | length > 0)
+        fail_msg: Set both GHCR_USERNAME and GHCR_TOKEN to pull a private package, or leave both unset for a public package.
+
+    - name: Create the application directory
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Log in to GitHub Container Registry for a private package
+      ansible.builtin.command:
+        cmd: docker login ghcr.io --username {{ ghcr_username | quote }} --password-stdin
+        stdin: "{{ ghcr_token }}"
+        stdin_add_newline: false
+      no_log: true
+      when:
+        - ghcr_username | length > 0
+        - ghcr_token | length > 0
+
+    - name: Install the EC2 Docker Compose configuration
+      ansible.builtin.template:
+        src: files/docker-compose.yml
+        dest: "{{ app_dir }}/docker-compose.aws.yml"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Pull the published ML service image
+      ansible.builtin.command:
+        cmd: docker compose -f docker-compose.aws.yml pull
+        chdir: "{{ app_dir }}"
+      register: image_pull
+      changed_when: >-
+        'Pulled' in image_pull.stdout or
+        'Downloaded newer image' in image_pull.stdout or
+        'Pull complete' in image_pull.stdout
+
+    - name: Start the ML service container
+      ansible.builtin.command:
+        cmd: docker compose -f docker-compose.aws.yml up --detach
+        chdir: "{{ app_dir }}"
+      register: compose_result
+      changed_when: >-
+        'Created' in compose_result.stdout or
+        'Started' in compose_result.stdout or
+        'Recreated' in compose_result.stdout or
+        'Recreate' in compose_result.stdout
+
+    - name: Wait for the ML API to become healthy
+      ansible.builtin.uri:
+        url: http://127.0.0.1:5001/health
+        method: GET
+        status_code: 200
+        return_content: true
+      register: health_check
+      until: health_check.json.status | default('') == 'healthy'
+      retries: 30
+      delay: 10
