@@ -22,7 +22,12 @@ RUN pip install --no-cache-dir -r requirements-docker.txt && \
 
 COPY app/ ./ml_service/app/
 
-RUN mkdir -p /app/ml_service/resources/uploads /app/ml_service/resources/outputs
+RUN if grep -q "^version https://git-lfs.github.com/spec/v1$" \
+      /app/ml_service/app/ml_models/attention_unet_model.pth; then \
+      echo "The model checkpoint is a Git LFS pointer. Check out the repository with LFS enabled." >&2; \
+      exit 1; \
+    fi && \
+    mkdir -p /app/ml_service/resources/uploads /app/ml_service/resources/outputs
 
 EXPOSE 5001
 
