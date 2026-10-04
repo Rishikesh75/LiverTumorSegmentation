@@ -1,0 +1,18 @@
+# Production runtime dependencies for the CPU-only EC2 image.
+fastapi==0.108.0
+uvicorn[standard]==0.25.0
+python-multipart==0.0.6
+pydantic==2.5.0
+
+numpy==1.26.4
+scipy==1.13.1
+nibabel==5.2.1
+scikit-image==0.22.0
+
+# Runtime dependencies required by the CPU-only PyTorch wheel.
+filelock
+typing-extensions>=4.8.0
+networkx
+jinja2
+fsspec
+sympy==1.13.1

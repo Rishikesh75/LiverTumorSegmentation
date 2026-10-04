@@ -5,18 +5,20 @@ ENV PYTHONUNBUFFERED=1 \
   PYTHONDONTWRITEBYTECODE=1 \
   PYTHONPATH=/app:/app/ml_service/app
 
-RUN apt-get update && apt-get install -y \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
-    libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+COPY requirements-docker.txt ./requirements-docker.txt
+RUN pip install --no-cache-dir -r requirements-docker.txt && \
+    pip install --no-cache-dir --no-deps \
+    --index-url https://download.pytorch.org/whl/cpu \
+    "torch==2.5.1+cpu" && \
+    rm -rf \
+      /usr/local/lib/python3.10/site-packages/torch/include \
+      /usr/local/lib/python3.10/site-packages/torch/test && \
+    find /usr/local/lib/python3.10/site-packages \
+      -type d -name __pycache__ -prune -exec rm -rf {} +
 
 COPY app/ ./ml_service/app/
 
@@ -28,4 +30,3 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5001/health', timeout=5)" || exit 1
 
 CMD ["uvicorn", "app:app", "--app-dir", "/app/ml_service/app", "--host", "0.0.0.0", "--port", "5001", "--log-level", "info"]
-

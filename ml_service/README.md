@@ -72,13 +72,17 @@ file: <image_file>
 
 ### Build
 ```bash
-docker build -t ml-service .
+docker build -f Dockerfile -t ml-service .
 ```
 
 ### Run
 ```bash
-docker run -p 5000:5000 ml-service
+docker run -p 5001:5001 ml-service
 ```
+
+The Docker image installs the CPU-only PyTorch wheel and production runtime
+dependencies from `requirements-docker.txt`. Local development can continue to
+use `requirements.txt`, which includes the existing development dependencies.
 
 ## Model Setup
 
@@ -108,4 +112,3 @@ This microservice is part of a larger architecture:
 - **Frontend** (Angular) - User interface
 
 See the root `README-DOCKER.md` for full architecture documentation.
-
