@@ -1,0 +1,133 @@
+name: Test Docker pull on AWS EC2
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: liver-segmentation-aws
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+  TF_VAR_aws_region: ${{ vars.AWS_REGION }}
+  TF_VAR_ssh_key_name: ${{ vars.EC2_KEY_PAIR_NAME }}
+  TF_VAR_api_allowed_cidr: ${{ vars.API_ALLOWED_CIDR }}
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+jobs:
+  test-docker-pull:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Validate deployment settings
+        env:
+          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+          EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$AWS_ROLE_ARN" || { echo "Set the AWS_ROLE_ARN repository secret."; exit 1; }
+          test -n "$EC2_SSH_PRIVATE_KEY" || { echo "Set the EC2_SSH_PRIVATE_KEY repository secret."; exit 1; }
+          test -n "$AWS_REGION" || { echo "Set the AWS_REGION repository variable."; exit 1; }
+          test -n "$TF_STATE_BUCKET" || { echo "Set the TF_STATE_BUCKET repository variable."; exit 1; }
+          test -n "$TF_VAR_ssh_key_name" || { echo "Set the EC2_KEY_PAIR_NAME repository variable."; exit 1; }
+          test -n "$TF_VAR_api_allowed_cidr" || { echo "Set the API_ALLOWED_CIDR repository variable."; exit 1; }
+
+      - name: Configure AWS credentials with GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.10.5
+
+      - name: Initialize Terraform with persistent S3 state
+        working-directory: infra/terraform
+        run: |
+          terraform init -input=false -reconfigure \
+            -backend-config="bucket=${TF_STATE_BUCKET}" \
+            -backend-config="key=infra/terraform/terraform.tfstate" \
+            -backend-config="region=${AWS_REGION}" \
+            -backend-config="encrypt=true" \
+            -backend-config="use_lockfile=true"
+
+      - name: Verify an existing Terraform-managed instance
+        id: instance
+        working-directory: infra/terraform
+        run: |
+          set -euo pipefail
+          if ! terraform state list | grep -Fxq 'aws_instance.ml_service'; then
+            echo "No EC2 instance is tracked by this Terraform state. Run the deploy workflow first."
+            exit 1
+          fi
+          echo "public_ip=$(terraform output -raw instance_public_ip)" >> "$GITHUB_OUTPUT"
+
+      - name: Get this runner's public IP
+        id: runner-ip
+        run: |
+          set -euo pipefail
+          ip="$(curl --fail --silent --show-error https://checkip.amazonaws.com)"
+          echo "cidr=${ip}/32" >> "$GITHUB_OUTPUT"
+
+      - name: Temporarily allow SSH from this runner
+        id: open-ssh
+        working-directory: infra/terraform
+        env:
+          ADMIN_CIDR: ${{ steps.runner-ip.outputs.cidr }}
+        run: |
+          set -euo pipefail
+          terraform plan -input=false -out=open-ssh.tfplan \
+            -var="admin_cidr=${ADMIN_CIDR}"
+          terraform apply -input=false open-ssh.tfplan
+
+      - name: Set up Python for Ansible
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Ansible
+        run: python -m pip install --disable-pip-version-check ansible-core
+
+      - name: Write SSH key and Ansible inventory
+        id: ansible-files
+        env:
+          EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          INSTANCE_IP: ${{ steps.instance.outputs.public_ip }}
+        run: |
+          set -euo pipefail
+          key_path="${RUNNER_TEMP}/ec2_key"
+          printf '%s\n' "$EC2_SSH_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+          inventory_path="${RUNNER_TEMP}/inventory.ini"
+          printf '[ml_service]\n%s ansible_user=ubuntu ansible_ssh_private_key_file=%s ansible_python_interpreter=/usr/bin/python3\n' \
+            "$INSTANCE_IP" "$key_path" > "$inventory_path"
+          echo "inventory_path=${inventory_path}" >> "$GITHUB_OUTPUT"
+
+      - name: Pull and run the small public Docker sample image
+        env:
+          INVENTORY_PATH: ${{ steps.ansible-files.outputs.inventory_path }}
+        run: |
+          set -euo pipefail
+          ANSIBLE_SSH_COMMON_ARGS="-o UserKnownHostsFile=${RUNNER_TEMP}/known_hosts -o StrictHostKeyChecking=accept-new" \
+            ansible-playbook \
+            -i "$INVENTORY_PATH" infra/ansible/test-docker-image.yml
+
+      - name: Close SSH ingress
+        if: always() && steps.instance.outcome == 'success' && steps.open-ssh.outcome == 'success'
+        working-directory: infra/terraform
+        run: |
+          terraform plan -input=false -out=close-ssh.tfplan \
+            -var="admin_cidr=127.0.0.1/32"
+          terraform apply -input=false close-ssh.tfplan

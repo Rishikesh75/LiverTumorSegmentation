@@ -1,0 +1,35 @@
+---
+- name: Verify Docker can pull and run a small public image
+  hosts: ml_service
+  become: true
+  tasks:
+    - name: Wait for SSH to become available
+      ansible.builtin.wait_for_connection:
+        timeout: 300
+        sleep: 5
+        connect_timeout: 10
+
+    - name: Check Docker is running
+      ansible.builtin.service:
+        name: docker
+        state: started
+
+    - name: Pull the small public hello-world image
+      ansible.builtin.command:
+        cmd: docker pull hello-world:latest
+      async: 300
+      poll: 10
+      changed_when: true
+
+    - name: Run the Docker sample image
+      ansible.builtin.command:
+        cmd: docker run --rm hello-world:latest
+      register: hello_world_result
+      changed_when: false
+      failed_when:
+        - hello_world_result.rc != 0 or
+          'Hello from Docker!' not in hello_world_result.stdout
+
+    - name: Report successful Docker pull and run
+      ansible.builtin.debug:
+        msg: "Docker successfully pulled and ran hello-world:latest on the EC2 instance."

@@ -91,6 +91,22 @@ The Terraform state bucket must exist before running the workflow. For an
 empty new deployment, the first workflow run creates the application
 infrastructure and stores its state in that bucket.
 
+### Test Docker without pulling the large ML image
+
+After deploying the EC2 instance, run **Actions → Test Docker pull on AWS EC2
+→ Run workflow** from `main`. This separate smoke test uses the same AWS
+OIDC role, Terraform S3 state, EC2 SSH key, and repository variables as the
+deployment workflow. It refuses to create an instance if Terraform state does
+not already contain one, temporarily opens SSH from the GitHub runner, then
+asks EC2 to pull and run the small public `hello-world:latest` image. SSH
+ingress is closed again in a cleanup step.
+
+The workflow passes only if the image pull succeeds and its container prints
+`Hello from Docker!`. This tests the AWS credentials, Terraform state access,
+SSH connectivity, and Docker Hub image-pull path without downloading the
+PyTorch application image. It does not deploy or modify the ML service
+container.
+
 ### If you already created resources using local Terraform state
 
 Do not run the GitHub destroy workflow until the existing Terraform state has
